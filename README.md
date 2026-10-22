@@ -138,12 +138,16 @@ The frontend will run on `http://localhost:3001`
 
 The API is served from `/api` on the backend host (default `http://localhost:5000/api`).
 The frontend uses the same-origin `/api` path by default and Vite proxies it to
-`http://localhost:5000`. To point the frontend at a deployed API directly, create
-`frontend/.env` and set:
+`http://localhost:5000`. To point the frontend at a deployed API directly, set `VITE_API_URL` in the
+frontend hosting provider to the backend URL, with or without the `/api` suffix:
 
 ```env
 VITE_API_URL=https://your-api.example.com/api
 ```
+
+For example, `https://xray-ai-system.onrender.com` is normalized to
+`https://xray-ai-system.onrender.com/api`. Redeploy the frontend after changing
+this build-time variable.
 
 For local development with a backend on a different port, keep `VITE_API_URL=/api`
 and set `VITE_API_PROXY_TARGET` to the backend origin, for example
@@ -151,7 +155,8 @@ and set `VITE_API_PROXY_TARGET` to the backend origin, for example
 
 Set `CORS_ORIGIN` in `backend/.env` to a comma-separated list of browser origins
 that should be allowed to call the backend directly, such as
-`https://app.example.com,https://admin.example.com`. The default `*` allows
+`https://app.example.com,https://admin.example.com`. HTTPS origins on
+`*.vercel.app` are also allowed for preview deployments. The default `*` allows
 cross-origin browser requests from any origin; use an explicit list in production.
 The API uses bearer tokens rather than cookies, so cross-origin credentials are
 not enabled.

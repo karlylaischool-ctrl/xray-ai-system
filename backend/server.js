@@ -31,7 +31,10 @@ const allowedOrigins = configuredOrigins
   .filter(Boolean);
 
 app.use(cors({
-  origin: allowedOrigins.includes('*') ? '*' : allowedOrigins
+  origin: (origin, callback) => {
+    const isVercelOrigin = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin || '');
+    callback(null, allowedOrigins.includes('*') || allowedOrigins.includes(origin) || isVercelOrigin);
+  }
 }));
 
 app.use((req, res, next) => {
