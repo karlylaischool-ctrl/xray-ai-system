@@ -77,7 +77,7 @@ npm install
 Create a `.env` file in the backend directory:
 
 ```env
-PORT=5000
+PORT=5001
 MONGODB_URI=mongodb://localhost:27017/xray-ai-system
 JWT_SECRET=your_jwt_secret_key_change_this_in_production
 JWT_EXPIRE=7d
@@ -123,7 +123,7 @@ cd backend
 npm run dev
 ```
 
-The backend will run on `http://localhost:5000`
+The backend will run on `http://localhost:5001`
 
 ### Start Frontend
 
@@ -136,9 +136,9 @@ The frontend will run on `http://localhost:3001`
 
 ### Configure API access
 
-The API is served from `/api` on the backend host (default `http://localhost:5000/api`).
+The API is served from `/api` on the backend host (default `http://localhost:5001/api`).
 The frontend uses the same-origin `/api` path by default and Vite proxies it to
-`http://localhost:5000`. To point the frontend at a deployed API directly, set `VITE_API_URL` in the
+`http://localhost:5001`. To point the frontend at a deployed API directly, set `VITE_API_URL` in the
 frontend hosting provider to the backend URL, with or without the `/api` suffix:
 
 ```env
@@ -151,7 +151,7 @@ this build-time variable.
 
 For local development with a backend on a different port, keep `VITE_API_URL=/api`
 and set `VITE_API_PROXY_TARGET` to the backend origin, for example
-`http://localhost:5001`.
+`http://localhost:5002`.
 
 Set `CORS_ORIGIN` in `backend/.env` to a comma-separated list of browser origins
 that should be allowed to call the backend directly, such as
@@ -292,7 +292,7 @@ unauthorized response.
 - Verify GOOGLE_CLOUD_PROJECT_ID
 
 ### Frontend Not Connecting to Backend
-- Ensure backend is running on port 5000
+- Ensure backend is running on port 5001
 - Check CORS configuration in backend
 - Verify API_URL in frontend stores
 

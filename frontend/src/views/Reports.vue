@@ -73,6 +73,18 @@
               <v-icon v-if="authStore.user?.role === 'doctor'" size="small" class="mr-2" @click.stop="editReport(item)">mdi-pencil</v-icon>
               <v-icon v-if="authStore.user?.role === 'doctor'" size="small" @click.stop="deleteReport(item)">mdi-delete</v-icon>
               <v-icon v-if="authStore.user?.role === 'patient'" size="small" @click.stop="$router.push(`/reports/${item._id}`)">mdi-eye</v-icon>
+              <v-btn
+                v-if="authStore.user?.role === 'patient'"
+                size="small"
+                variant="text"
+                color="primary"
+                :loading="exportingReportId === item._id"
+                :disabled="exportingReportId !== null && exportingReportId !== item._id"
+                @click.stop="exportPDF(item)"
+              >
+                <v-icon start>mdi-file-pdf-box</v-icon>
+                Export PDF
+              </v-btn>
             </template>
           </v-data-table>
         </v-card>
@@ -96,6 +108,7 @@ const statusFilter = ref('all')
 const bodyPartFilter = ref('all')
 const dateFilter = ref('')
 const reports = ref([])
+const exportingReportId = ref(null)
 
 const headers = [
   { title: 'Report ID', key: 'reportId' },
@@ -182,6 +195,26 @@ const deleteReport = async (report) => {
     await apiStore.deleteReport(report._id)
     const data = await apiStore.getReports()
     reports.value = data.reports
+  }
+}
+
+const exportPDF = async (report) => {
+  if (!confirm('Do you consent to export this report as PDF?')) return
+
+  exportingReportId.value = report._id
+  try {
+    const blob = await apiStore.exportPDF({ reportId: report._id, consent: true })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `report_${report.reportId}.pdf`
+    link.click()
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+  } catch (error) {
+    console.error('PDF export error:', error)
+    alert(error.response?.data?.message || 'PDF export failed. Please try again.')
+  } finally {
+    exportingReportId.value = null
   }
 }
 </script>

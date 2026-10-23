@@ -19,16 +19,52 @@ exports.exportReportPDF = async (req, res) => {
     if (!report) {
       return res.status(404).json({ message: 'Report not found' });
     }
-    
-    const doc = new PDFDocument({ margin: 50 });
-    const fileName = `report_${report.reportId}_${Date.now()}.pdf`;
-    const filePath = path.join(__dirname, '../exports', fileName);
-    
-    if (!fs.existsSync(path.dirname(filePath))) {
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+    if (req.user.role === 'patient') {
+      const patient = await Patient.findOne({
+        _id: report.patientId._id,
+        userId: req.user._id
+      });
+
+      if (!patient) {
+        return res.status(403).json({ message: 'You can only export your own reports' });
+      }
+    }
+
+    const uploadsDirectory = path.resolve(__dirname, '../uploads');
+    const imagePaths = [];
+    for (const image of report.imagePaths || []) {
+      const imagePath = image.path;
+      const resolvedPath = path.resolve(__dirname, '..', imagePath || '');
+      const relativePath = path.relative(uploadsDirectory, resolvedPath);
+
+      if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        return res.status(400).json({ message: 'Report contains an invalid X-ray image path' });
+      }
+      if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isFile()) {
+        return res.status(404).json({ message: 'An X-ray image for this report could not be found' });
+      }
+
+      imagePaths.push(resolvedPath);
+    }
+
+    if (imagePaths.length === 0) {
+      return res.status(422).json({ message: 'No X-ray image is available for this report' });
     }
     
-    doc.pipe(fs.createWriteStream(filePath));
+    const doc = new PDFDocument({ margin: 50 });
+    res.attachment(`report_${report.reportId}.pdf`);
+    res.type('application/pdf');
+
+    doc.on('error', (error) => {
+      console.error('PDF generation error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Failed to generate PDF' });
+      } else {
+        res.destroy(error);
+      }
+    });
+    doc.pipe(res);
     
     doc.fontSize(20).font('Helvetica-Bold').text('X-Ray Report', { align: 'center' });
     doc.moveDown();
@@ -46,6 +82,22 @@ exports.exportReportPDF = async (req, res) => {
     doc.text(`Name: ${report.patientId.demographics.firstName} ${report.patientId.demographics.lastName}`);
     doc.text(`Date of Birth: ${new Date(report.patientId.demographics.dateOfBirth).toLocaleDateString()}`);
     doc.moveDown();
+
+    doc.addPage();
+    imagePaths.forEach((imagePath, index) => {
+      if (index > 0) {
+        doc.addPage();
+      }
+      doc.fontSize(14).font('Helvetica-Bold').text(`X-Ray Image${index > 0 ? ` ${index + 1}` : ''}`);
+      doc.moveDown(0.5);
+      doc.image(imagePath, {
+        fit: [500, 500],
+        align: 'center',
+        valign: 'center'
+      });
+      doc.moveDown();
+    });
+    doc.addPage();
     
     doc.fontSize(14).font('Helvetica-Bold').text('Doctor Information');
     doc.fontSize(12).font('Helvetica');
@@ -75,17 +127,12 @@ exports.exportReportPDF = async (req, res) => {
     );
     
     doc.end();
-    
-    doc.on('end', () => {
-      res.download(filePath, fileName, (err) => {
-        if (err) {
-          console.error('PDF download error:', err);
-        }
-        fs.unlinkSync(filePath);
-      });
-    });
-    
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('PDF export error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: error.message });
+    } else {
+      res.destroy(error);
+    }
   }
 };

@@ -181,7 +181,7 @@
       </v-col>
 
       <v-col cols="12" v-if="authStore.user?.role === 'patient'">
-        <v-btn color="primary" @click="exportPDF">
+        <v-btn color="primary" @click="exportPDF" :loading="exportingPDF">
           <v-icon start>mdi-file-pdf</v-icon>
           Export PDF
         </v-btn>
@@ -203,6 +203,7 @@ const apiStore = useApiStore()
 const report = ref(null)
 const approving = ref(false)
 const reanalyzing = ref(false)
+const exportingPDF = ref(false)
 const customPrompt = ref('')
 const isEditing = ref(false)
 const doctorInterpretation = ref({
@@ -251,14 +252,22 @@ const approveReport = async () => {
 }
 
 const exportPDF = async () => {
-  const consent = confirm('Do you consent to export this report as PDF?')
-  if (consent) {
+  if (!confirm('Do you consent to export this report as PDF?')) return
+
+  exportingPDF.value = true
+  try {
     const blob = await apiStore.exportPDF({ reportId: report.value._id, consent: true })
     const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `report_${report.value.reportId}.pdf`
-    a.click()
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `report_${report.value.reportId}.pdf`
+    link.click()
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+  } catch (error) {
+    console.error('PDF export error:', error)
+    alert(error.response?.data?.message || 'PDF export failed. Please try again.')
+  } finally {
+    exportingPDF.value = false
   }
 }
 
